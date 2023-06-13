@@ -9,7 +9,3 @@
 /target/
 /.idea/
 *.iml
-*.log
-*.class
-/localRef/
-*.jks
