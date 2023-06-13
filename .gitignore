@@ -35,4 +35,8 @@ build/
 .vscode/
 
 ### Mac OS ###
-.DS_Store
+.DS_Store*.jks
+*.log
+*.class
+/localRef/
+*.jks
