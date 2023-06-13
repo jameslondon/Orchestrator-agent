@@ -28,6 +28,9 @@ public class App {
     // The main purpose of asynchronous event processing is to make sure that client is able to perform /meta/connect requests which keeps the session alive on the server side
     private static final ExecutorService workerThreadPool = Executors.newFixedThreadPool(10);
     public static void main(String[] argv) throws Exception {
+
+        //Config.get(argv[0]) must be called at with argv parameter (only once) at the top of the main program
+        Config config = Config.get(argv[0]);
         // shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             workerThreadPool.shutdown(); // Disable new tasks from being submitted
@@ -47,7 +50,6 @@ public class App {
             }
         }));
 
-        Config config = Config.get();
         long replayFrom = config.getRelayFrom();
 
         BayeuxParameters params = new BayeuxParametersImpl(new nCinoAccess(), config);

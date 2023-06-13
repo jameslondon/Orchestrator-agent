@@ -45,8 +45,11 @@ public class Config {
 	public String getKeystoreAlias() {return keystoreAlias;}
 	public String getGoogleCredentialKeyPath() {return googleCredentialKeyPath;}
 	public static Config get() {
+		return config;
+	}
+	public static Config get(String propertyFile) {
 		if (config == null) {
-			try (InputStream input = new FileInputStream("config.properties")) {
+			try (InputStream input = new FileInputStream(propertyFile)) {
 				Properties prop = new Properties();
 				prop.load(input);
 				config = new Config();

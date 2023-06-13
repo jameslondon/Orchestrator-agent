@@ -1,9 +1,13 @@
 
-clientId:3MVG9Lf04EwncL7mm2UlskTO40lwH63Ac_YMztL9N2rJ3Pkcu1eDAOFWuUmF7fjMfzsBJH5ved6cZrI8.FekN
-username:jian.liu@lloydsbanking.com.devpoc1
+run program with a mandatory parameter, which a property configuration file (include path). 
+Below is a template:
+
+------begin template-------
+clientId:xxxxx
+username:xxx@abc.com
 nCinoPrivateKeyPath:
 tokenEndpoint:https://test.salesforce.com/services/oauth2/token
-nCinoInstanceUrl: https://lloydsbank--devpoc1.sandbox.my.salesforce.com
+nCinoInstanceUrl: https://abo--devpoc1.sandbox.my.salesforce.com
 subscribedChangeEvents:  LLC_BI__Connection__ChangeEvent, LLC_BI__Collateral__ChangeEvent, LLC_BI__Account_Covenant__ChangeEvent
 relayFrom:
 gcsBuckName:jianliu888-hometest
@@ -12,3 +16,5 @@ keystoreType:JKS
 keystorePath:./keystore.jks
 keystoreAlias:myalias
 googleCredentialKeyPath:
+----end template------
+
