@@ -11,7 +11,7 @@ public class Config {
 	private static Config config;
 	private String  clientId;
 	private String  username;
-	private String  privateKeyPath;
+	private String  nCinoPrivateKeyPath;
 	private String tokenEndpoint;
 	private String nCinoInstanceUrl;
 	private Long relayFrom;
@@ -22,6 +22,7 @@ public class Config {
 	private String keystoreType;
 	private String keystorePath;
 	private String keystoreAlias;
+	private String googleCredentialKeyPath;
 
 	public String getClientId() {
 		return clientId;
@@ -29,7 +30,7 @@ public class Config {
 	public String getUsername() {
 		return username;
 	}
-	public String getPrivateKeyPath() { return privateKeyPath; }
+	public String getnCinoPrivateKeyPath() { return nCinoPrivateKeyPath; }
 	public String getTokenEndpoint() {
 		return tokenEndpoint;
 	}
@@ -42,6 +43,7 @@ public class Config {
 	public String getKeystoreType() {return keystoreType;}
 	public String getKeystorePath() {return keystorePath;}
 	public String getKeystoreAlias() {return keystoreAlias;}
+	public String getGoogleCredentialKeyPath() {return googleCredentialKeyPath;}
 	public static Config get() {
 		if (config == null) {
 			try (InputStream input = new FileInputStream("config.properties")) {
@@ -50,7 +52,7 @@ public class Config {
 				config = new Config();
 				config.clientId = readMandatoryProp(prop, "clientId");
 				config.username = readMandatoryProp(prop, "username");
-				config.privateKeyPath = readMandatoryProp(prop, "privateKeyPath");
+				config.nCinoPrivateKeyPath = readOptionalProp(prop, "nCinoPrivateKeyPath");
 				config.tokenEndpoint = readMandatoryProp(prop, "tokenEndpoint");
 				config.nCinoInstanceUrl = readMandatoryProp(prop, "nCinoInstanceUrl");
 				config.subscribedChangeEvents = readMandatoryProp(prop, "subscribedChangeEvents");
@@ -59,6 +61,7 @@ public class Config {
 				config.keystoreType = readMandatoryProp(prop, "keystoreType");
 				config.keystorePath = readMandatoryProp(prop, "keystorePath");
 				config.keystoreAlias = readMandatoryProp(prop, "keystoreAlias");
+				config.googleCredentialKeyPath = readOptionalProp(prop, "googleCredentialKeyPath");
 				config.relayFrom = readOptionalLongProp(prop, "relayFrom");
 			} catch (IOException e) {
 				throw new RuntimeException("Failed to load configuration: " + e.getMessage(), e);
@@ -86,5 +89,8 @@ public class Config {
 		} else {
 			return Long.valueOf(stringValue);
 		}
+	}
+	private static String readOptionalProp(Properties prop, String key) throws IOException {
+		return prop.getProperty(key);
 	}
 }

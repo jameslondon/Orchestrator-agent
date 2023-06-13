@@ -20,8 +20,10 @@ import com.jil.util.BayeuxParameters;
 import com.jil.util.BayeuxParametersImpl;
 import com.jil.util.nCinoAccess;
 import io.netty.handler.timeout.TimeoutException;
+import lombok.extern.slf4j.Slf4j;
 
-public class Main {
+@Slf4j
+public class App {
     // More than one thread can be used in the thread pool which leads to parallel processing of events which may be acceptable by the application
     // The main purpose of asynchronous event processing is to make sure that client is able to perform /meta/connect requests which keeps the session alive on the server side
     private static final ExecutorService workerThreadPool = Executors.newFixedThreadPool(10);
@@ -35,7 +37,7 @@ public class Main {
                     workerThreadPool.shutdownNow(); // Cancel currently executing tasks
                     // Wait a while for tasks to respond to being cancelled
                     if (!workerThreadPool.awaitTermination(60, TimeUnit.SECONDS))
-                        System.err.println("Pool did not terminate");
+                        log.error("Pool did not terminate");
                 }
             } catch (InterruptedException ie) {
                 // (Re-)Cancel if current thread also interrupted
@@ -53,12 +55,12 @@ public class Main {
 
         GoogleCredentials credentials = GoogleCredentialsProvider.getInstance().getCredentials();
         if (credentials == null) {
-            System.out.println("Failed to get Google credentials.");
+            log.error("Failed to get Google credentials.");
         }
 
         nCinoEmpConnector connector = new nCinoEmpConnector(params);
         if (connector == null) {
-            System.out.println("connector == null");
+            log.error("connector == null");
         }
 
         connector.start().get(5, TimeUnit.SECONDS);
@@ -70,7 +72,7 @@ public class Main {
                     try {
                         String topicServiceUri = "/data/" + topic.trim();
                         TopicSubscription subscription = connector.subscribe(topicServiceUri, replayFrom, consumer).get(5, TimeUnit.SECONDS);
-                        System.out.println(String.format("Subscribed: %s", subscription));
+                        log.debug(String.format("Subscribed: %s", subscription));
                     } catch (InterruptedException | ExecutionException | TimeoutException |
                              java.util.concurrent.TimeoutException e) {
                         e.printStackTrace();

@@ -33,7 +33,7 @@ public class nCinoAccess {
         return () -> {
             try {
                 Map<String, String> tokenResp = callTokeEndpoint(generateJwt());
-                log.debug("tokenResp", tokenResp);
+                //log.debug("tokenResp", tokenResp);
                 return tokenResp;
             } catch (Exception e) {
                 log.error("Error performing access", e);
@@ -43,25 +43,30 @@ public class nCinoAccess {
     }
 
     private static String generateJwt() throws Exception {
-//        byte[] privateKeyBytes = Files.readAllBytes(Paths.get(config.getPrivateKeyPath()));
-//        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-//        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-//        PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+        PrivateKey privateKey;
 
-// Load the keystore
-        String keyStorePassword = System.getenv("KEYSTORE_PASSWORD");
-        String keyPassword = System.getenv("KEY_PASSWORD");
-        KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
-        try (InputStream keystoreStream = new FileInputStream(config.getKeystorePath())) {
-            keystore.load(keystoreStream, keyPassword.toCharArray());
+        //for testing purpose, user may use nCino Private Key directly (which is not secure)
+        String nCinoPrivateKeyPath = config.getnCinoPrivateKeyPath();
+        if (!(nCinoPrivateKeyPath == null || nCinoPrivateKeyPath.isEmpty())) {
+            byte[] privateKeyBytes = Files.readAllBytes(Paths.get(nCinoPrivateKeyPath));
+            PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            privateKey = keyFactory.generatePrivate(keySpec);
+        } else {
+           // Load key from keystore
+            String keyStorePassword = System.getenv("KEYSTORE_PASSWORD");
+            String keyPassword = System.getenv("KEY_PASSWORD");
+            KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+            try (InputStream keystoreStream = new FileInputStream(config.getKeystorePath())) {
+                keystore.load(keystoreStream, keyPassword.toCharArray());
+            }
+            // Retrieve the private key
+            Key key = keystore.getKey(config.getKeystoreAlias(), keyStorePassword.toCharArray());
+            if (!(key instanceof PrivateKey)) {
+                throw new KeyStoreException("Loaded key is not a private key");
+            }
+            privateKey = (PrivateKey) key;
         }
-
-        // Retrieve the private key
-        Key key = keystore.getKey(config.getKeystoreAlias(), keyStorePassword.toCharArray());
-        if (!(key instanceof PrivateKey)) {
-            throw new KeyStoreException("Loaded key is not a private key");
-        }
-        PrivateKey privateKey = (PrivateKey) key;
 
         JwtBuilder jwtBuilder = Jwts.builder()
                 .setIssuer(config.getClientId())

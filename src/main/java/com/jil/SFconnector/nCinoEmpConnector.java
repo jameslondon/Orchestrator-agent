@@ -9,8 +9,8 @@ import org.cometd.client.BayeuxClient;
 import org.cometd.client.transport.LongPollingTransport;
 import org.eclipse.jetty.client.HttpClient;
 import org.eclipse.jetty.client.api.Request;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+//import org.slf4j.Logger;
+//import org.slf4j.LoggerFactory;
 
 import java.net.ConnectException;
 import java.util.Map;
@@ -19,7 +19,9 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class nCinoEmpConnector {
     private static final String ERROR = "error";
     private static final String FAILURE = "failure";
@@ -82,7 +84,7 @@ public class nCinoEmpConnector {
     public static long REPLAY_FROM_TIP = -1L;
 
     private static String AUTHORIZATION = "Authorization";
-    private static final Logger log = LoggerFactory.getLogger(nCinoEmpConnector.class);
+//    private static final Logger log = LoggerFactory.getLogger(nCinoEmpConnector.class);
 
     private volatile BayeuxClient client;
     private final HttpClient httpClient;

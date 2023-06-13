@@ -9,7 +9,9 @@ import com.jil.config.Config;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public class CDCEventProcessor implements Consumer<Map<String, Object>> {
 
     private final ObjectMapper mapper = new ObjectMapper();
@@ -28,7 +30,7 @@ public class CDCEventProcessor implements Consumer<Map<String, Object>> {
         workerThreadPool.submit(() -> {
                     try {
                         String jsonStr = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(event);
-                        System.out.println("Change Data Capture event fired. Data:\n" + jsonStr);
+                        log.info("Change Data Capture event fired. Data:\n" + jsonStr);
                         ObjectMapper objectMapper = new ObjectMapper();
 
                         JsonNode rootNode = objectMapper.readTree(jsonStr);
@@ -37,15 +39,15 @@ public class CDCEventProcessor implements Consumer<Map<String, Object>> {
                         String entityName = changeEventHeaderNode.path("entityName").asText();
 
                         if (changeEventHeaderNode.isMissingNode()) {
-                            System.out.println("JSON string does not contain a 'ChangeEventHeader' property.");
+                            log.debug("JSON string does not contain a 'ChangeEventHeader' property.");
                             return;
                         }
                         if (entityName.isEmpty()) {
-                            System.out.println("JSON string does not contain an 'entityName' property.");
+                            log.debug("JSON string does not contain an 'entityName' property.");
                             return;
                         }
                         String jsonPayloadStr = objectMapper.writeValueAsString(payloadNode);
-                        System.out.println("payload json: " + jsonPayloadStr);
+                        log.info("payload json: " + jsonPayloadStr);
 
                         String bqTableName = entityName.toLowerCase();
                         String blobName = bqTableName + ".json";
