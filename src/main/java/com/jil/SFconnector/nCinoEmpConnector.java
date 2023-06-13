@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-public class EmpConnector {
+public class nCinoEmpConnector {
     private static final String ERROR = "error";
     private static final String FAILURE = "failure";
 
@@ -34,10 +34,6 @@ public class EmpConnector {
             subscriptions.add(this);
         }
 
-        /*
-         * (non-Javadoc)
-         * @see com.salesforce.emp.SFconnector.Subscription#cancel()
-         */
         @Override
         public void cancel() {
             replay.remove(topicWithoutQueryString(topic));
@@ -47,19 +43,11 @@ public class EmpConnector {
             }
         }
 
-        /*
-         * (non-Javadoc)
-         * @see com.salesforce.emp.SFconnector.Subscription#getReplay()
-         */
         @Override
         public long getReplayFrom() {
             return replay.getOrDefault(topicWithoutQueryString(topic), REPLAY_FROM_TIP);
         }
 
-        /*
-         * (non-Javadoc)
-         * @see com.salesforce.emp.SFconnector.Subscription#getTopic()
-         */
         @Override
         public String getTopic() {
             return topic;
@@ -94,28 +82,26 @@ public class EmpConnector {
     public static long REPLAY_FROM_TIP = -1L;
 
     private static String AUTHORIZATION = "Authorization";
-    private static final Logger log = LoggerFactory.getLogger(EmpConnector.class);
+    private static final Logger log = LoggerFactory.getLogger(nCinoEmpConnector.class);
 
     private volatile BayeuxClient client;
     private final HttpClient httpClient;
     private final BayeuxParameters parameters;
     private final ConcurrentMap<String, Long> replay = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean();
-
     private final Set<SubscriptionImpl> subscriptions = new CopyOnWriteArraySet<>();
     private final Set<MessageListenerInfo> listenerInfos = new CopyOnWriteArraySet<>();
 
     private Function<Boolean, String> bearerTokenProvider;
     private AtomicBoolean reauthenticate = new AtomicBoolean(false);
 
-    public EmpConnector(BayeuxParameters parameters) {
+    public nCinoEmpConnector(BayeuxParameters parameters) {
         this.parameters = parameters;
         httpClient = new HttpClient(parameters.sslContextFactory());
         httpClient.getProxyConfiguration().getProxies().addAll(parameters.proxies());
     }
 
-    /**
-     * Start the SFconnector.
+    /**ssure
      * @return true if connection was established, false otherwise
      */
     public Future<Boolean> start() {
@@ -130,23 +116,17 @@ public class EmpConnector {
         return future;
     }
 
-    /**
-     * Disconnecting Bayeux Client in Emp Connector
-     */
     private void disconnect() {
         if (!running.compareAndSet(true, false)) {
             return;
         }
         if (client != null) {
-            log.info("Disconnecting Bayeux Client in EmpConnector");
+            log.info("Disconnecting Bayeux Client in nCinoEmpConnector");
             client.disconnect();
             client = null;
         }
     }
 
-    /**
-     * Stop the SFconnector
-     */
     public void stop() {
         disconnect();
         if (httpClient != null) {
@@ -159,13 +139,6 @@ public class EmpConnector {
         }
     }
 
-    /**
-     * Set a bearer token / session id provider function that takes a boolean as input and returns a valid token.
-     * If the input is true, the provider function is supposed to re-authenticate with the Salesforce server
-     * and get a fresh session id or token.
-     *
-     * @param bearerTokenProvider a bearer token provider function.
-     */
     public void setBearerTokenProvider(Function<Boolean, String> bearerTokenProvider) {
         this.bearerTokenProvider = bearerTokenProvider;
     }
@@ -241,7 +214,7 @@ public class EmpConnector {
         return subscribe(topic, REPLAY_FROM_TIP, consumer);
     }
 
-    public EmpConnector addListener(String channel, ClientSessionChannel.MessageListener messageListener) {
+    public nCinoEmpConnector addListener(String channel, ClientSessionChannel.MessageListener messageListener) {
         listenerInfos.add(new MessageListenerInfo(channel, messageListener));
         return this;
     }
@@ -267,7 +240,7 @@ public class EmpConnector {
     }
 
     private Future<Boolean> connect() {
-        log.info("EmpConnector connecting");
+        log.info("nCinoEmpConnector connecting");
         CompletableFuture<Boolean> future = new CompletableFuture<>();
 
         try {

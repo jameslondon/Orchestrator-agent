@@ -1,155 +1,81 @@
 
 package com.jil;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Stream;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.google.auth.oauth2.GoogleCredentials;
-import com.jil.BigqueryClient.BigQueryJSONLoader;
 import com.jil.BigqueryClient.GoogleCredentialsProvider;
-import com.jil.SFconnector.EmpConnector;
+import com.jil.Processors.CDCEventProcessor;
+import com.jil.SFconnector.nCinoEmpConnector;
 import com.jil.SFconnector.TopicSubscription;
+import com.jil.config.Config;
 import com.jil.util.BayeuxParameters;
+import com.jil.util.BayeuxParametersImpl;
 import com.jil.util.nCinoAccess;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.util.concurrent.*;
+import io.netty.handler.timeout.TimeoutException;
 
 public class Main {
     // More than one thread can be used in the thread pool which leads to parallel processing of events which may be acceptable by the application
     // The main purpose of asynchronous event processing is to make sure that client is able to perform /meta/connect requests which keeps the session alive on the server side
-    private static final ExecutorService workerThreadPool = Executors.newFixedThreadPool(1);
-
+    private static final ExecutorService workerThreadPool = Executors.newFixedThreadPool(10);
     public static void main(String[] argv) throws Exception {
-        if (argv.length < 2 || argv.length > 6) {
-            System.err.println("Usage: BearerTokenExample url token topic [replayFrom]");
-            System.exit(1);
-        }
-        long replayFrom = EmpConnector.REPLAY_FROM_TIP;
-        if (argv.length == 6) {
-            replayFrom = Long.parseLong(argv[5]);
-        }
-
-        BayeuxParameters params = new BayeuxParameters() {
-
-            @Override
-            public String bearerToken() {
-                //return AccessTokenFetcher.getAccessToken(argv[0]);
-                return nCinoAccess.getAccessTokenSupplier().get().get("access_token");
-            }
-
-            ;
-
-            @Override
-            public URL host() {
-                try {
-                    return new URL(argv[0]);
-                } catch (MalformedURLException e) {
-                    throw new IllegalArgumentException(String.format("Unable to create url: %s", argv[0]), e);
+        // shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            workerThreadPool.shutdown(); // Disable new tasks from being submitted
+            try {
+                // Wait a while for existing tasks to terminate
+                if (!workerThreadPool.awaitTermination(60, TimeUnit.SECONDS)) {
+                    workerThreadPool.shutdownNow(); // Cancel currently executing tasks
+                    // Wait a while for tasks to respond to being cancelled
+                    if (!workerThreadPool.awaitTermination(60, TimeUnit.SECONDS))
+                        System.err.println("Pool did not terminate");
                 }
+            } catch (InterruptedException ie) {
+                // (Re-)Cancel if current thread also interrupted
+                workerThreadPool.shutdownNow();
+                // Preserve interrupt status
+                Thread.currentThread().interrupt();
             }
-        };
+        }));
 
-        //Consumer<Map<String, Object>> consumer = event -> workerThreadPool.submit(() -> System.out.println(String.format("Received:\n%s, \nEvent processed by threadName:%s, threadId: %s", JSON.toString(event), Thread.currentThread().getName(), Thread.currentThread().getId())));
+        Config config = Config.get();
+        long replayFrom = config.getRelayFrom();
 
-        // Create ObjectMapper instance
-        ObjectMapper mapper = new ObjectMapper();
+        BayeuxParameters params = new BayeuxParametersImpl(new nCinoAccess(), config);
+
 
         GoogleCredentials credentials = GoogleCredentialsProvider.getInstance().getCredentials();
-        System.out.println("Google credentials: " + credentials);
         if (credentials == null) {
             System.out.println("Failed to get Google credentials.");
         }
 
-        Consumer<Map<String, Object>> consumer = event -> {
-            String blobName = "ncinoconnection.json";
-            String bqTableName = "nCinoConnection";
-            workerThreadPool.submit(() -> {
-                        try {
-                            String jsonStr = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(event);
-                            System.out.println("Change Data Capture event fired. Data:\n" + jsonStr);
-                            if (BigQueryJSONLoader.loadGCSFromJSON(credentials,
-                                    "jianliu888-hometest",
-                                    blobName,
-                                    jsonStr)) {
-                                BigQueryJSONLoader.loadBQFromGCS(credentials,
-                                        "jianliu888-hometest",
-                                        blobName,
-                                        "jianliuhometest",
-                                        bqTableName);
-                            }
-                        } catch (JsonProcessingException | InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-            );
-        };
-        Consumer<Map<String, Object>> consumerSecurity = event -> {
-            String blobName = "ncinosecurity.json";
-            String bqTableName = "nCinoSecurity";
-            workerThreadPool.submit(() -> {
-                        try {
-                            String jsonStr = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(event);
-                            System.out.println("Change Data Capture event fired. Data:\n" + jsonStr);
-                            if (BigQueryJSONLoader.loadGCSFromJSON(credentials,
-                                    "jianliu888-hometest",
-                                    blobName,
-                                    jsonStr)) {
-                                BigQueryJSONLoader.loadBQFromGCS(credentials,
-                                        "jianliu888-hometest",
-                                        blobName,
-                                        "jianliuhometest",
-                                        bqTableName);
-                            }
-                        } catch (JsonProcessingException | InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-            );
-        };
-
-        Consumer<Map<String, Object>> consumerCovenant = event -> {
-            String blobName = "ncinocovenant.json";
-            String bqTableName = "nCinoCovenant";
-            workerThreadPool.submit(() -> {
-                        try {
-                            String jsonStr = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(event);
-                            System.out.println("Change Data Capture event fired. Data:\n" + jsonStr);
-                            if (BigQueryJSONLoader.loadGCSFromJSON(credentials,
-                                    "jianliu888-hometest",
-                                    blobName,
-                                    jsonStr)) {
-                                BigQueryJSONLoader.loadBQFromGCS(credentials,
-                                        "jianliu888-hometest",
-                                        blobName,
-                                        "jianliuhometest",
-                                        bqTableName);
-                            }
-                        } catch (JsonProcessingException | InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-            );
-        };
-
-        EmpConnector connector = new EmpConnector(params);
+        nCinoEmpConnector connector = new nCinoEmpConnector(params);
+        if (connector == null) {
+            System.out.println("connector == null");
+        }
 
         connector.start().get(5, TimeUnit.SECONDS);
 
-        TopicSubscription subscription = connector.subscribe(argv[2], replayFrom, consumer).get(5, TimeUnit.SECONDS);
-        TopicSubscription subscriptionSecurity = connector.subscribe(argv[3], replayFrom, consumerSecurity).get(5, TimeUnit.SECONDS);
-        TopicSubscription subscriptionCovenant = connector.subscribe(argv[4], replayFrom, consumerCovenant).get(5, TimeUnit.SECONDS);
+        Stream<String> eventStream = Arrays.stream(config.getSubscribedChangeEvents().split(","));
 
-
-        System.out.println(String.format("Subscribed: %s", subscription));
-        System.out.println(String.format("Subscribed: %s", subscriptionSecurity));
-        System.out.println(String.format("Subscribed: %s", subscriptionCovenant));
+        Consumer<Map<String, Object>> consumer = new CDCEventProcessor(credentials, config, workerThreadPool);
+        eventStream.forEach(topic -> {
+                    try {
+                        String topicServiceUri = "/data/" + topic.trim();
+                        TopicSubscription subscription = connector.subscribe(topicServiceUri, replayFrom, consumer).get(5, TimeUnit.SECONDS);
+                        System.out.println(String.format("Subscribed: %s", subscription));
+                    } catch (InterruptedException | ExecutionException | TimeoutException |
+                             java.util.concurrent.TimeoutException e) {
+                        e.printStackTrace();
+                    }
+                }
+                );
     }
 }

@@ -1,6 +1,6 @@
 package com.jil.util;
 
-import com.jil.config.Constants;
+import com.jil.config.Config;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
@@ -13,10 +13,11 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.security.KeyFactory;
-import java.security.PrivateKey;
+import java.security.*;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Instant;
 import java.util.Date;
@@ -25,7 +26,8 @@ import java.util.Map;
 import java.util.function.Supplier;
 
 @Slf4j
-public class nCinoAccess implements Constants {
+public class nCinoAccess {
+    static Config config = Config.get();
 
     public static Supplier<Map<String, String>> getAccessTokenSupplier() {
         return () -> {
@@ -41,15 +43,30 @@ public class nCinoAccess implements Constants {
     }
 
     private static String generateJwt() throws Exception {
-        byte[] privateKeyBytes = Files.readAllBytes(Paths.get(PRIVATE_KEY_PATH));
-        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+//        byte[] privateKeyBytes = Files.readAllBytes(Paths.get(config.getPrivateKeyPath()));
+//        PKCS8EncodedKeySpec keySpec = new PKCS8EncodedKeySpec(privateKeyBytes);
+//        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+//        PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+
+// Load the keystore
+        String keyStorePassword = System.getenv("KEYSTORE_PASSWORD");
+        String keyPassword = System.getenv("KEY_PASSWORD");
+        KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+        try (InputStream keystoreStream = new FileInputStream(config.getKeystorePath())) {
+            keystore.load(keystoreStream, keyPassword.toCharArray());
+        }
+
+        // Retrieve the private key
+        Key key = keystore.getKey(config.getKeystoreAlias(), keyStorePassword.toCharArray());
+        if (!(key instanceof PrivateKey)) {
+            throw new KeyStoreException("Loaded key is not a private key");
+        }
+        PrivateKey privateKey = (PrivateKey) key;
 
         JwtBuilder jwtBuilder = Jwts.builder()
-                .setIssuer(CLIENT_ID)
-                .setSubject(USERNAME)
-                .setAudience(TOKEN_ENDPOINT)
+                .setIssuer(config.getClientId())
+                .setSubject(config.getUsername())
+                .setAudience(config.getTokenEndpoint())
                 .setExpiration(Date.from(Instant.now().plusSeconds(1200)));
         String jwt = jwtBuilder
                 .signWith(SignatureAlgorithm.RS256, privateKey)
@@ -60,11 +77,9 @@ public class nCinoAccess implements Constants {
 
     private static Map<String, String> callTokeEndpoint(String jwt) {
         WebClient client = WebClient.builder().build();
-
         String requestBody = "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + jwt;
-
         Mono<String> responseMono = client.post()
-                .uri(TOKEN_ENDPOINT)
+                .uri(config.getTokenEndpoint())
                 .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_FORM_URLENCODED_VALUE)
                 .body(BodyInserters.fromValue(requestBody))
                 .retrieve()
@@ -77,13 +92,6 @@ public class nCinoAccess implements Constants {
         try {
             ObjectMapper mapper = new ObjectMapper();
             JsonNode responseJson = mapper.readTree(response);
-//            {
-//                "access_token":"00D3H0000000gL",
-//                    "scope":"user_registration_api id api full",
-//                    "instance_url":"https://lloydsbank--devpoc1.sandbox.my.salesforce.com",
-//                    "id":"https://test.salesforce.com/id/00D3H0000000gLyUAI/0053H000004IveaQAC",
-//                    "token_type":"Bearer"
-//            }
             tokenResp.put("access_token", responseJson.get("access_token").asText());
             tokenResp.put("instance_url", responseJson.get("instance_url").asText());
             tokenResp.put("id", responseJson.get("id").asText());
