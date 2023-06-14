@@ -1,6 +1,9 @@
 
 package com.jil;
 
+import java.lang.reflect.Constructor;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -12,7 +15,7 @@ import java.util.stream.Stream;
 
 import com.google.auth.oauth2.GoogleCredentials;
 import com.jil.BigqueryClient.GoogleCredentialsProvider;
-import com.jil.Processors.CDCEventProcessor;
+import com.jil.Processors.CDCEventGQProcessor;
 import com.jil.SFconnector.nCinoEmpConnector;
 import com.jil.SFconnector.TopicSubscription;
 import com.jil.config.Config;
@@ -21,6 +24,10 @@ import com.jil.util.BayeuxParametersImpl;
 import com.jil.util.nCinoAccess;
 import io.netty.handler.timeout.TimeoutException;
 import lombok.extern.slf4j.Slf4j;
+import org.eclipse.sisu.launch.Main;
+
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
 
 @Slf4j
 public class App {
@@ -30,6 +37,10 @@ public class App {
     public static void main(String[] argv) throws Exception {
 
         //Config.get(argv[0]) must be called at with argv parameter (only once) at the top of the main program
+        if (argv.length < 1) {
+            log.error("You must provide configuration file (path/fileName) as a parameter");
+            return;
+        }
         Config config = Config.get(argv[0]);
         // shutdown hook
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
@@ -54,7 +65,6 @@ public class App {
 
         BayeuxParameters params = new BayeuxParametersImpl(new nCinoAccess(), config);
 
-
         GoogleCredentials credentials = GoogleCredentialsProvider.getInstance().getCredentials();
         if (credentials == null) {
             log.error("Failed to get Google credentials.");
@@ -69,7 +79,8 @@ public class App {
 
         Stream<String> eventStream = Arrays.stream(config.getSubscribedChangeEvents().split(","));
 
-        Consumer<Map<String, Object>> consumer = new CDCEventProcessor(credentials, config, workerThreadPool);
+        Consumer<Map<String, Object>> consumer = new CDCEventGQProcessor(credentials, config, workerThreadPool);
+
         eventStream.forEach(topic -> {
                     try {
                         String topicServiceUri = "/data/" + topic.trim();

@@ -18,3 +18,7 @@ keystoreAlias:myalias
 googleCredentialKeyPath:
 ----end template------
 
+How to run:
+java -cp "target/Orchestrator-agent-1.0-SNAPSHOT-phat.jar" com.jil.App localConfig/config.properties
+
+localConfig/config.properties is a program parameter for your properties configuration file.

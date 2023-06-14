@@ -12,7 +12,7 @@ import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class CDCEventProcessor implements Consumer<Map<String, Object>> {
+public class CDCEventGQProcessor implements Consumer<Map<String, Object>> {
 
     private final ObjectMapper mapper = new ObjectMapper();
     private final GoogleCredentials  credentials;
@@ -20,7 +20,7 @@ public class CDCEventProcessor implements Consumer<Map<String, Object>> {
 
     private ExecutorService workerThreadPool;
 
-    public CDCEventProcessor(GoogleCredentials credentials, Config config, ExecutorService workerThreadPool) {
+    public CDCEventGQProcessor(GoogleCredentials credentials, Config config, ExecutorService workerThreadPool) {
         this.credentials = credentials;
         this.config = config;
         this.workerThreadPool = workerThreadPool;
