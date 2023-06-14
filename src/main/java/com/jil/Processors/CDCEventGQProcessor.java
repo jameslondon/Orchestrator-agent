@@ -62,6 +62,10 @@ public class CDCEventGQProcessor implements Consumer<Map<String, Object>> {
                                     config.getBigQueryDatasetName(), //"jianliuhometest",
                                     bqTableName);
                         }
+
+                    } catch (RuntimeException e) {
+                        // handle RuntimeException
+                        log.error("RuntimeException occurred during task execution", e);
                     } catch (JsonProcessingException | InterruptedException e) {
                         throw new RuntimeException(e);
                     }
